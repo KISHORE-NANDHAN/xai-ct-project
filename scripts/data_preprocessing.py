@@ -1,71 +1,148 @@
-# File: xai_ct_project/scripts/data_preprocessing.py
+# ============================================
+# XAI-CT PROJECT DATA PREPROCESSING
+# ============================================
 
-import os
+import os, json, cv2, yaml, pydicom, nibabel as nib
+import numpy as np
 from PIL import Image
+from pathlib import Path
 from tqdm import tqdm
-import json
-import random
+from datetime import datetime
+import logging
+from concurrent.futures import ThreadPoolExecutor
 
 # -----------------------------
-# CONFIG
+# Load config
 # -----------------------------
-RAW_PATH = 'data/raw/SARS-COV-2'
-PROCESSED_PATH = 'data/preprocessed/SARS-COV-2'
-IMG_SIZE = (224, 224)  # Resize images to 224x224
-TRAIN_SPLIT = 0.8
-VAL_SPLIT = 0.1  # Test will be remaining 0.1
+CONFIG_PATH = Path("config/preprocess.yaml")
+with open(CONFIG_PATH, "r") as f:
+    cfg = yaml.safe_load(f)
 
-# -----------------------------
-# CREATE PROCESSED FOLDER
-# -----------------------------
-os.makedirs(PROCESSED_PATH, exist_ok=True)
+RAW_DIRS = cfg["paths"]["raw_data"]
+CURATED_DIR = Path(cfg["paths"]["curated_data"])
+LOG_DIR = Path(cfg["paths"]["logs"])
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # -----------------------------
-# PROCESS IMAGES
+# Logging setup
 # -----------------------------
-metadata = []
+logging.basicConfig(
+    filename=LOG_DIR / "preprocessing_all_datasets.log",
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+if cfg["logging"].get("console", True):
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logging.getLogger().addHandler(console)
 
-for label in ['covid', 'non-covid']:
-    in_dir = os.path.join(RAW_PATH, label)
-    out_dir = os.path.join(PROCESSED_PATH, label)
-    os.makedirs(out_dir, exist_ok=True)
-
-    print(f"\nProcessing {label} images...")
-    for img_file in tqdm(os.listdir(in_dir)):
-        try:
-            img_path = os.path.join(in_dir, img_file)
-            img = Image.open(img_path).convert('RGB')  # Ensure RGB
-            img = img.resize(IMG_SIZE)
-            save_path = os.path.join(out_dir, img_file)
-            img.save(save_path)
-
-            metadata.append({
-                "filepath": save_path,
-                "label": 1 if label == 'covid' else 0,
-                "label_name": label
-            })
-        except Exception as e:
-            print(f"Error processing {img_file}: {e}")
+logging.info("🚀 Starting preprocessing pipeline for all datasets")
 
 # -----------------------------
-# SHUFFLE AND SPLIT DATA
+# Image loaders
 # -----------------------------
-random.shuffle(metadata)
-n = len(metadata)
-train_end = int(TRAIN_SPLIT * n)
-val_end = int((TRAIN_SPLIT + VAL_SPLIT) * n)
+def load_ct_image(path):
+    ext = path.suffix.lower()
+    try:
+        if ext in [".png", ".jpg", ".jpeg"]:
+            img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        elif ext == ".dcm":
+            ds = pydicom.dcmread(str(path), force=True)
+            img = ds.pixel_array.astype(np.float32)
+        elif ext in [".nii", ".nii.gz"]:
+            img = nib.load(str(path)).get_fdata()
+            if img.ndim == 3:
+                img = np.mean(img, axis=2)
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
+    except Exception as e:
+        logging.error(f"Failed to load {path}: {e}")
+        img = None
+    return img
 
-train_data = metadata[:train_end]
-val_data = metadata[train_end:val_end]
-test_data = metadata[val_end:]
+# -----------------------------
+# Preprocessing functions
+# -----------------------------
+def apply_hu_window(img, hu_min=-1000, hu_max=400):
+    img = np.clip(img, hu_min, hu_max)
+    img = ((img - hu_min) / (hu_max - hu_min) * 255).astype(np.uint8)
+    return img
 
-# Save metadata JSON files
-with open(os.path.join(PROCESSED_PATH, 'train.json'), 'w') as f:
-    json.dump(train_data, f, indent=4)
-with open(os.path.join(PROCESSED_PATH, 'val.json'), 'w') as f:
-    json.dump(val_data, f, indent=4)
-with open(os.path.join(PROCESSED_PATH, 'test.json'), 'w') as f:
-    json.dump(test_data, f, indent=4)
+def preprocess_image(img, size=(224, 224)):
+    img = cv2.resize(img, size, interpolation=cv2.INTER_LINEAR)
+    img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+    return Image.fromarray(img.astype(np.uint8))
 
-print("\n✅ Preprocessing complete!")
-print(f"Train: {len(train_data)} | Val: {len(val_data)} | Test: {len(test_data)}")
+def denoise(img):
+    return cv2.bilateralFilter(img, 9, 75, 75)
+
+# -----------------------------
+# Process single image
+# -----------------------------
+def process_image(img_path, label, dataset_name, out_dir):
+    img = load_ct_image(img_path)
+    if img is None:
+        return None
+
+    if cfg["preprocess"].get("convert_to_grayscale", True) and img.ndim == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    if cfg["preprocess"].get("normalization", True):
+        img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+    
+    if cfg["preprocess"].get("remove_noise", False):
+        img = denoise(img)
+    
+    if cfg["preprocess"].get("hu_window", None):
+        img = apply_hu_window(img, *cfg["preprocess"]["hu_window"])
+    
+    img = preprocess_image(img, tuple(cfg["preprocess"]["image_size"]))
+
+    out_path = out_dir / label / img_path.name
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out_path)
+
+    return {"file_path": str(out_path), "label": label, "dataset": dataset_name}
+
+# -----------------------------
+# Process a dataset
+# -----------------------------
+def process_dataset(dataset_name):
+    raw_dir = Path(RAW_DIRS[dataset_name])
+    out_dir = CURATED_DIR / dataset_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    dataset_info = cfg["datasets"]["available"][dataset_name]
+    labels = dataset_info["classes"]
+
+    # Dynamically detect any additional folders
+    existing_labels = [p.name for p in raw_dir.iterdir() if p.is_dir()]
+    labels_to_process = [l for l in labels if l in existing_labels]
+
+    metadata = []
+    for label in labels_to_process:
+        img_paths = list((raw_dir / label).glob("*"))
+        logging.info(f"{dataset_name} - {label}: {len(img_paths)} images")
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(tqdm(executor.map(lambda p: process_image(p, label, dataset_name, out_dir), img_paths),
+                                total=len(img_paths), desc=f"{dataset_name} - {label}"))
+
+        for record in results:
+            if record:
+                metadata.append(record)
+
+    # Save metadata
+    meta_path = out_dir / "metadata.json"
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=4)
+    logging.info(f"✅ Metadata saved for {dataset_name}: {meta_path}")
+
+# -----------------------------
+# Entry point
+# -----------------------------
+if __name__ == "__main__":
+    for dataset in cfg["datasets"]["available"]:
+        logging.info(f"💾 Processing dataset: {dataset}")
+        process_dataset(dataset)
+    logging.info("🏁 All datasets processed successfully")
