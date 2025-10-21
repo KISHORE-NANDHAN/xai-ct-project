@@ -1,0 +1,6 @@
+2025-10-21 20:22:46,954 | INFO | \U0001f4cc Starting split generation for dataset: SARS-CoV2
+2025-10-21 20:22:46,961 | INFO | Using Stratified split
+2025-10-21 20:22:46,988 | INFO | \u2705 Train manifest created: data\preprocessed\SARS-CoV2\train_manifest.json
+2025-10-21 20:22:46,997 | INFO | \u2705 Val manifest created: data\preprocessed\SARS-CoV2\val_manifest.json
+2025-10-21 20:22:47,004 | INFO | \u2705 Test manifest created: data\preprocessed\SARS-CoV2\test_manifest.json
+2025-10-21 20:22:47,006 | INFO | \U0001f3c1 Split generation completed.

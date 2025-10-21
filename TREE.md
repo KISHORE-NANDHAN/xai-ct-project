@@ -12,12 +12,11 @@
 │   ├── preprocessed
 │   │   ├── COVID-CT-MD
 │   │   ├── COVIDx
-│   │   ├── LargeCOVID19
 │   │   └── SARS-CoV2
 │   └── raw
-│       ├── Covid-19(Multi-class)
-│       ├── SARS-COV-2
-│       └── covidxct_subset
+│       ├── Covid-19(Multi-class) -> COVID/ non-COVID/ CAP/
+│       ├── SARS-COV-2 -> COVID/ non-COVID/
+│       └── covidxct_subset -> COVID/ NORMAL/ PNEUMONIA/
 ├── explainability
 │   ├── attention_rollout.py
 │   ├── gradcam.py

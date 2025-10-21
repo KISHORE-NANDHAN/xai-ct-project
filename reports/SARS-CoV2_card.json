@@ -1,0 +1,18 @@
+{
+  "project": "XAI-CT Project",
+  "version": "1.0",
+  "dataset": "SARS-CoV2",
+  "total_images": 2481,
+  "class_distribution": {
+    "COVID": 1252,
+    "non-COVID": 1229
+  },
+  "image_size": [
+    224,
+    224
+  ],
+  "augmentation": true,
+  "normalization": true,
+  "source": "https://www.kaggle.com/datasets/plameneduardo/sarscov2-ctscan-dataset",
+  "intensity_stats": {}
+}

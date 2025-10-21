@@ -1,0 +1,19 @@
+{
+  "project": "XAI-CT Project",
+  "version": "1.0",
+  "dataset": "COVID-CT-MD",
+  "total_images": 17104,
+  "class_distribution": {
+    "COVID": 7593,
+    "CAP": 2618,
+    "non-COVID": 6893
+  },
+  "image_size": [
+    224,
+    224
+  ],
+  "augmentation": true,
+  "normalization": true,
+  "source": "https://github.com/ShahinSHH/COVID-CT-MD",
+  "intensity_stats": {}
+}
