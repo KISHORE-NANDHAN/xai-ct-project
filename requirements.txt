@@ -1,0 +1,48 @@
+# Core PyTorch stack
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
+pytorch-lightning==2.1.2
+
+# 3D medical imaging
+monai==1.2.0
+SimpleITK==2.5.2
+nibabel==5.3.2
+
+# Transformers & attention-based models
+transformers==4.42.0
+einops==0.6.1
+
+# Explainable AI
+captum==0.8.0
+shap==0.42.0
+torchmetrics==0.11.4
+
+# Image processing / plotting
+opencv-python==4.8.1.78
+Pillow==10.0.1
+matplotlib==3.8.0
+seaborn==0.12.2
+tqdm==4.66.1
+scikit-image==0.21.0
+
+# Data handling
+pandas==2.1.1
+numpy==1.26.0
+scikit-learn==1.3.0
+
+# DICOM handling & reports
+pydicom==2.4.3
+reportlab==4.0.0
+
+# Misc / Utilities
+albumentations==1.3.1
+jsonschema==4.21.1
+joblib==1.3.2
+
+# Configuration / reproducibility
+hydra-core==1.3.2
+omegaconf==2.3.0
+
+# Optional (large dataset downloads / Kaggle)
+kaggle==1.6.0
