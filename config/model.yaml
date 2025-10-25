@@ -1,0 +1,84 @@
+# ==========================================
+# Model & Training Configuration
+# For: XAI-CT Project (Day 2)
+# ==========================================
+
+# -----------------------------
+# DATASET MANAGEMENT
+# -----------------------------
+dataset:
+  active: "COVIDx"                        # auto-switch: choose from [COVIDx, COVID-CT-MD, SARS-CoV2]
+  available:
+    COVIDx:
+      train_json: "data/preprocessed/COVIDx/train_manifest.json"
+      val_json: "data/preprocessed/COVIDx/val_manifest.json"
+      test_json: "data/preprocessed/COVIDx/test_manifest.json"
+      input_size: 224
+      num_classes: 3                      # COVID / NORMAL / PNEUMONIA
+    COVID-CT-MD:
+      train_json: "data/preprocessed/COVID-CT-MD/train_manifest.json"
+      val_json: "data/preprocessed/COVID-CT-MD/val_manifest.json"
+      test_json: "data/preprocessed/COVID-CT-MD/test_manifest.json"
+      input_size: 224
+      num_classes: 2                      # COVID / non-COVID
+    SARS-CoV2:
+      train_json: "data/preprocessed/SARS-CoV2/train_manifest.json"
+      val_json: "data/preprocessed/SARS-CoV2/val_manifest.json"
+      test_json: "data/preprocessed/SARS-CoV2/test_manifest.json"
+      input_size: 224
+      num_classes: 2                      # COVID / non-COVID
+
+# -----------------------------
+# MODEL CONFIGURATION
+# -----------------------------
+model:
+  architecture: "resnet50"                # Options: resnet18, resnet34, resnet50, densenet121, efficientnet_b0
+  pretrained: true                        # Use ImageNet weights or train from scratch
+  in_channels: 3                          # RGB or grayscale converted to RGB
+  dropout: 0.3                            # Dropout in classifier head (optional)
+
+# -----------------------------
+# TRAINING CONFIGURATION
+# -----------------------------
+training:
+  epochs: 20
+  batch_size: 16
+  learning_rate: 1e-4
+  weight_decay: 1e-5
+  optimizer: "Adam"                       # Options: Adam, SGD, RMSprop
+  criterion: "CrossEntropyLoss"           # BCEWithLogitsLoss for binary; CrossEntropyLoss for multiclass
+  use_amp: true                           # Mixed precision training (speeds up on GPU)
+
+# -----------------------------
+# LEARNING RATE SCHEDULER
+# -----------------------------
+scheduler:
+  type: "StepLR"                          # Options: StepLR, CosineAnnealingLR, ReduceLROnPlateau
+  step_size: 5
+  gamma: 0.5
+
+# -----------------------------
+# PATHS & OUTPUTS
+# -----------------------------
+paths:
+  save_root: "models/"
+  logs_root: "logs/tensorboard/"
+  metrics_root: "reports/metrics/"
+  plots_root: "reports/plots/"
+  explain_root: "explainability/"
+
+# -----------------------------
+# DEVICE CONFIGURATION
+# -----------------------------
+device:
+  use_gpu: true
+  gpu_id: 0                               # Set automatically by torch if available
+  num_workers: 2
+
+# -----------------------------
+# LOGGING & CHECKPOINTS
+# -----------------------------
+logging:
+  save_best_only: true
+  monitor_metric: "val_auc"               # Metric for saving checkpoints
+  checkpoint_name: "best_model.pth"

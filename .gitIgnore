@@ -10,9 +10,12 @@ env/
 .venv/
 
 # Data (if large or private)
-data/raw/
-data/preprocessed/
-data/masks/
+data/raw/*
+!data/raw/.gitkeep
+data/preprocessed/*
+!data/preprocessed/.gitkeep
+data/masks/*
+!data/masks/.gitkeep
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -25,10 +28,17 @@ data/masks/
 Thumbs.db
 
 # Reports / generated PDFs
-reports/pdf/
-reports/dicom_seg/
-reports/dicom_sr/
-reports/gradcam_outputs
-
+reports/pdf/*
+!reports/pdf/.gitkeep
+reports/dicom_seg/*
+!reports/dicom_seg/.gitkeep
+reports/dicom_sr/*
+!reports/dicom_sr/.gitkeep
+reports/gradcam_outputs/*
+!reports/gradcam_outputs/.gitkeep
 
 models/resnet18*
+models/best_model.pth
+
+Tree.md
+data.zip
